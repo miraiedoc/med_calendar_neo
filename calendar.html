@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>診療支援カレンダー</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="診療カレンダー">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --today-bg: #e8f4fd;
+            --holiday-red: #e74c3c;
+            --saturday-blue: #3498db;
+            --company-holiday: #9b59b6;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            line-height: 1.6;
+            color: var(--primary-color);
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* ヘッダー */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .settings-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .settings-btn:hover {
+            background: #2980b9;
+        }
+
+        /* 本日の日付 */
+        .today-section {
+            text-align: center;
+            border-bottom: 3px solid var(--accent-color);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+        }
+
+        #today-date {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .today-holiday {
+            color: var(--holiday-red);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* 日数計算グリッド */
+        .date-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .date-card {
+            background: #f1f3f5;
+            padding: 12px 8px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .date-card.dynamic {
+            background: #fff3e0;
+            border: 3px solid #e67e22;
+        }
+
+        .date-label {
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: block;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .date-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        .date-value.holiday {
+            color: var(--holiday-red);
+        }
+
+        .date-value.company-holiday {
+            color: var(--company-holiday);
+        }
+
+        .holiday-name {
+            font-size: 0.85rem;
+            color: var(--holiday-red);
+            display: block;
+        }
+
+        .company-holiday-name {
+            font-size: 0.85rem;
+            color: var(--company-holiday);
+            display: block;
+        }
+
+        /* 動的入力 */
+        .dynamic-input {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        input[type="number"] {
+            width: 60px;
+            padding: 6px;
+            font-size: 1.2rem;
+            border: 2px solid #e67e22;
+            border-radius: 4px;
+            text-align: center;
+            background: white;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #d35400;
+            box-shadow: 0 0 5px rgba(230, 126, 34, 0.3);
+        }
+
+        .dynamic-label {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #e67e22;
+        }
+
+        .date-card.dynamic .date-value {
+            color: #d35400;
+        }
+
+        /* カレンダー */
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .nav-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .nav-btn:hover {
+            background: #2980b9;
+        }
+
+        .calendar-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .calendar-table th, .calendar-table td {
+            border: 1px solid #eee;
+            text-align: center;
+            padding: 6px 2px;
+            font-size: 0.9rem;
+        }
+
+        .calendar-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .calendar-table th:first-child { color: var(--holiday-red); }
+        .calendar-table th:last-child { color: var(--saturday-blue); }
+
+        .calendar-day {
+            min-height: 35px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .day-num {
+            font-weight: bold;
+        }
+
+        .day-num.sunday { color: var(--holiday-red); }
+        .day-num.saturday { color: var(--saturday-blue); }
+        .day-num.holiday { color: var(--holiday-red); }
+        .day-num.company-holiday { color: var(--company-holiday); }
+
+        .day-num.today {
+            background-color: var(--accent-color);
+            color: white !important;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .day-holiday-name {
+            font-size: 0.6rem;
+            color: var(--holiday-red);
+            line-height: 1.1;
+        }
+
+        .day-company-holiday {
+            font-size: 0.6rem;
+            color: var(--company-holiday);
+            line-height: 1.1;
+        }
+
+        /* 凡例 */
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.holiday { background: var(--holiday-red); }
+        .legend-dot.company { background: var(--company-holiday); }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .setting-section {
+            margin-bottom: 20px;
+        }
+
+        .setting-section h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+
+        .holiday-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .holiday-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .holiday-item:last-child {
+            border-bottom: none;
+        }
+
+        .delete-btn {
+            background: var(--holiday-red);
+            color: white;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .add-holiday {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .add-holiday input[type="date"],
+        .add-holiday input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .add-holiday input[type="date"] {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .add-holiday input[type="text"] {
+            flex: 2;
+            min-width: 150px;
+        }
+
+        .add-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .add-btn:hover {
+            background: #2980b9;
+        }
+
+        /* PWA インストールバナー */
+        .install-banner {
+            display: none;
+            background: var(--accent-color);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .install-banner.show {
+            display: flex;
+        }
+
+        .install-btn {
+            background: white;
+            color: var(--accent-color);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .dismiss-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- PWA インストールバナー -->
+    <div class="install-banner" id="install-banner">
+        <span>📱 ホーム画面に追加できます</span>
+        <div>
+            <button class="install-btn" id="install-btn">インストール</button>
+            <button class="dismiss-btn" id="dismiss-btn">×</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1 style="margin: 0; font-size: 1.2rem;">診療支援カレンダー</h1>
+        <button class="settings-btn" id="open-settings">⚙️ 設定</button>
+    </div>
+
+    <div class="today-section">
+        <div id="today-date">----年--月--日 (曜)</div>
+        <div class="today-holiday" id="today-holiday"></div>
+    </div>
+
+    <div class="date-grid">
+        <div class="date-card">
+            <span class="date-label">7日後</span>
+            <div id="date-7" class="date-value">-</div>
+        </div>
+        <div class="date-card">
+            <span class="date-label">14日後</span>
+            <div id="date-14" class="date-value">-</div>
+        </div>
+        <div class="date-card">
+            <span class="date-label">28日後</span>
+            <div id="date-28" class="date-value">-</div>
+        </div>
+        <div class="date-card">
+            <span class="date-label">56日後</span>
+            <div id="date-56" class="date-value">-</div>
+        </div>
+        <div class="date-card">
+            <span class="date-label">84日後</span>
+            <div id="date-84" class="date-value">-</div>
+        </div>
+        <div class="date-card dynamic">
+            <div class="dynamic-input">
+                <input type="number" id="input-dd" value="0" min="0">
+                <span class="dynamic-label">日後</span>
+            </div>
+            <div id="dynamic-result" class="date-value">-</div>
+        </div>
+    </div>
+
+    <div class="calendar-nav">
+        <button class="nav-btn" id="prev-month">◀ 前月</button>
+        <span class="calendar-title" id="calendar-title">----年 --月</span>
+        <button class="nav-btn" id="next-month">翌月 ▶</button>
+    </div>
+
+    <div id="calendar-area"></div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <span class="legend-dot holiday"></span>
+            <span>祝日</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot company"></span>
+            <span>自社休日</span>
+        </div>
+    </div>
+</div>
+
+<!-- 設定モーダル -->
+<div class="modal" id="settings-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>⚙️ 休日設定</h2>
+            <button class="close-btn" id="close-settings">×</button>
+        </div>
+
+        <div class="setting-section">
+            <h3>📅 自社休日一覧</h3>
+            <div class="holiday-list" id="company-holiday-list">
+                <p style="color: #999; text-align: center;">休日が登録されていません</p>
+            </div>
+            <div class="add-holiday">
+                <input type="date" id="new-holiday-date">
+                <input type="text" id="new-holiday-name" placeholder="休日名（例：創立記念日）">
+                <button class="add-btn" id="add-holiday-btn">追加</button>
+            </div>
+        </div>
+
+        <div class="setting-section">
+            <h3>🔄 データ管理</h3>
+            <button class="add-btn" id="clear-all-btn" style="background: var(--holiday-red);">全ての自社休日を削除</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 日本の祝日データ（年ごとに計算）
+function getJapaneseHolidays(year) {
+    const holidays = {};
+    
+    // 固定祝日
+    holidays[`${year}-01-01`] = '元日';
+    holidays[`${year}-02-11`] = '建国記念の日';
+    holidays[`${year}-02-23`] = '天皇誕生日';
+    holidays[`${year}-04-29`] = '昭和の日';
+    holidays[`${year}-05-03`] = '憲法記念日';
+    holidays[`${year}-05-04`] = 'みどりの日';
+    holidays[`${year}-05-05`] = 'こどもの日';
+    holidays[`${year}-08-11`] = '山の日';
+    holidays[`${year}-11-03`] = '文化の日';
+    holidays[`${year}-11-23`] = '勤労感謝の日';
+    
+    // ハッピーマンデー（第n月曜日）
+    holidays[getNthWeekday(year, 1, 1, 2)] = '成人の日'; // 1月第2月曜
+    holidays[getNthWeekday(year, 7, 1, 3)] = '海の日'; // 7月第3月曜
+    holidays[getNthWeekday(year, 9, 1, 3)] = '敬老の日'; // 9月第3月曜
+    holidays[getNthWeekday(year, 10, 1, 2)] = 'スポーツの日'; // 10月第2月曜
+    
+    // 春分の日・秋分の日（近似計算）
+    const shunbun = Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+    const shubun = Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+    holidays[`${year}-03-${String(shunbun).padStart(2, '0')}`] = '春分の日';
+    holidays[`${year}-09-${String(shubun).padStart(2, '0')}`] = '秋分の日';
+    
+    // 振替休日の計算
+    const addedSubstitutes = {};
+    Object.keys(holidays).forEach(dateStr => {
+        const date = new Date(dateStr);
+        if (date.getDay() === 0) { // 日曜日の場合
+            let nextDay = new Date(date);
+            nextDay.setDate(nextDay.getDate() + 1);
+            let nextDayStr = formatDateKey(nextDay);
+            // 翌日以降で最初の平日を探す
+            while (holidays[nextDayStr] || addedSubstitutes[nextDayStr]) {
+                nextDay.setDate(nextDay.getDate() + 1);
+                nextDayStr = formatDateKey(nextDay);
+            }
+            addedSubstitutes[nextDayStr] = '振替休日';
+        }
+    });
+    Object.assign(holidays, addedSubstitutes);
+    
+    // 国民の休日（祝日に挟まれた平日）
+    const sortedDates = Object.keys(holidays).sort();
+    for (let i = 0; i < sortedDates.length - 1; i++) {
+        const current = new Date(sortedDates[i]);
+        const next = new Date(sortedDates[i + 1]);
+        const diff = (next - current) / (1000 * 60 * 60 * 24);
+        if (diff === 2) {
+            const between = new Date(current);
+            between.setDate(between.getDate() + 1);
+            const betweenStr = formatDateKey(between);
+            if (!holidays[betweenStr] && between.getDay() !== 0) {
+                holidays[betweenStr] = '国民の休日';
+            }
+        }
+    }
+    
+    return holidays;
+}
+
+// 第n週のm曜日を取得
+function getNthWeekday(year, month, weekday, n) {
+    const firstDay = new Date(year, month - 1, 1);
+    let dayOfWeek = firstDay.getDay();
+    let diff = weekday - dayOfWeek;
+    if (diff < 0) diff += 7;
+    const date = 1 + diff + (n - 1) * 7;
+    return `${year}-${String(month).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+}
+
+// 日付キーのフォーマット
+function formatDateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+// 自社休日の管理
+let companyHolidays = JSON.parse(localStorage.getItem('companyHolidays') || '{}');
+
+function saveCompanyHolidays() {
+    localStorage.setItem('companyHolidays', JSON.stringify(companyHolidays));
+}
+
+// 祝日キャッシュ
+const holidayCache = {};
+function getHolidaysForYear(year) {
+    if (!holidayCache[year]) {
+        holidayCache[year] = getJapaneseHolidays(year);
+    }
+    return holidayCache[year];
+}
+
+// 日付が祝日かチェック
+function checkHoliday(date) {
+    const dateKey = formatDateKey(date);
+    const year = date.getFullYear();
+    const holidays = getHolidaysForYear(year);
+    
+    if (holidays[dateKey]) {
+        return { type: 'national', name: holidays[dateKey] };
+    }
+    if (companyHolidays[dateKey]) {
+        return { type: 'company', name: companyHolidays[dateKey] };
+    }
+    return null;
+}
+
+// 日付フォーマット
+function formatDate(date, includeYear = true) {
+    const days = ['日', '月', '火', '水', '木', '金', '土'];
+    const y = date.getFullYear();
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    const w = days[date.getDay()];
+    
+    if (includeYear) {
+        return `${y}年${m}月${d}日 (${w})`;
+    }
+    return `${m}/${d} (${w})`;
+}
+
+// 日数加算
+function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+}
+
+// 日数カードの更新
+function updateDateCard(elementId, date) {
+    const element = document.getElementById(elementId);
+    const holiday = checkHoliday(date);
+    
+    let html = formatDate(date, false);
+    
+    if (holiday) {
+        if (holiday.type === 'national') {
+            element.className = 'date-value holiday';
+            html += `<span class="holiday-name">${holiday.name}</span>`;
+        } else {
+            element.className = 'date-value company-holiday';
+            html += `<span class="company-holiday-name">${holiday.name}</span>`;
+        }
+    } else {
+        element.className = 'date-value';
+    }
+    
+    element.innerHTML = html;
+}
+
+// カレンダー表示月
+let currentDisplayMonth = new Date();
+
+// 初期化
+function init() {
+    const now = new Date();
+    currentDisplayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // 今日の日付
+    document.getElementById('today-date').innerText = formatDate(now);
+    
+    // 今日が祝日かチェック
+    const todayHoliday = checkHoliday(now);
+    const todayHolidayEl = document.getElementById('today-holiday');
+    if (todayHoliday) {
+        todayHolidayEl.innerText = todayHoliday.type === 'national' 
+            ? `🎌 ${todayHoliday.name}` 
+            : `🏢 ${todayHoliday.name}`;
+    }
+    
+    // 固定日数
+    [7, 14, 28, 56, 84].forEach(num => {
+        updateDateCard(`date-${num}`, addDays(now, num));
+    });
+    
+    // 動的計算
+    const inputDD = document.getElementById('input-dd');
+    updateDateCard('dynamic-result', addDays(now, 0));
+    
+    inputDD.addEventListener('input', () => {
+        const val = parseInt(inputDD.value) || 0;
+        updateDateCard('dynamic-result', addDays(now, val));
+    });
+    
+    // カレンダー生成
+    generateCalendar();
+    
+    // 設定モーダル
+    document.getElementById('open-settings').addEventListener('click', openSettings);
+    document.getElementById('close-settings').addEventListener('click', closeSettings);
+    document.getElementById('settings-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'settings-modal') closeSettings();
+    });
+    
+    // 休日追加
+    document.getElementById('add-holiday-btn').addEventListener('click', addCompanyHoliday);
+    document.getElementById('clear-all-btn').addEventListener('click', clearAllHolidays);
+    
+    // カレンダーナビゲーション
+    document.getElementById('prev-month').addEventListener('click', () => {
+        currentDisplayMonth.setMonth(currentDisplayMonth.getMonth() - 1);
+        generateCalendar();
+    });
+    document.getElementById('next-month').addEventListener('click', () => {
+        currentDisplayMonth.setMonth(currentDisplayMonth.getMonth() + 1);
+        generateCalendar();
+    });
+    
+    // PWAインストール
+    setupPWA();
+}
+
+// カレンダー生成
+function generateCalendar() {
+    const year = currentDisplayMonth.getFullYear();
+    const month = currentDisplayMonth.getMonth();
+    const today = new Date();
+    
+    document.getElementById('calendar-title').innerText = `${year}年 ${month + 1}月`;
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    let html = '<table class="calendar-table">';
+    html += '<tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr><tr>';
+    
+    // 1日目までの空白
+    for (let i = 0; i < firstDay.getDay(); i++) {
+        html += '<td></td>';
+    }
+    
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+        const currentDate = new Date(year, month, d);
+        const dayOfWeek = currentDate.getDay();
+        const isToday = currentDate.toDateString() === today.toDateString();
+        const holiday = checkHoliday(currentDate);
+        
+        let dayClass = '';
+        let holidayHtml = '';
+        
+        if (holiday) {
+            if (holiday.type === 'national') {
+                dayClass = 'holiday';
+                holidayHtml = `<span class="day-holiday-name">${holiday.name}</span>`;
+            } else {
+                dayClass = 'company-holiday';
+                holidayHtml = `<span class="day-company-holiday">${holiday.name}</span>`;
+            }
+        } else if (dayOfWeek === 0) {
+            dayClass = 'sunday';
+        } else if (dayOfWeek === 6) {
+            dayClass = 'saturday';
+        }
+        
+        const todayClass = isToday ? ' today' : '';
+        
+        html += `<td>
+            <div class="calendar-day">
+                <span class="day-num ${dayClass}${todayClass}">${d}</span>
+                ${holidayHtml}
+            </div>
+        </td>`;
+        
+        if (dayOfWeek === 6 && d < lastDay.getDate()) {
+            html += '</tr><tr>';
+        }
+    }
+    
+    // 最終行の空白
+    const lastDayOfWeek = lastDay.getDay();
+    if (lastDayOfWeek < 6) {
+        for (let i = lastDayOfWeek + 1; i <= 6; i++) {
+            html += '<td></td>';
+        }
+    }
+    
+    html += '</tr></table>';
+    document.getElementById('calendar-area').innerHTML = html;
+}
+
+// 設定モーダル
+function openSettings() {
+    document.getElementById('settings-modal').classList.add('active');
+    renderCompanyHolidayList();
+}
+
+function closeSettings() {
+    document.getElementById('settings-modal').classList.remove('active');
+}
+
+function renderCompanyHolidayList() {
+    const list = document.getElementById('company-holiday-list');
+    const sortedDates = Object.keys(companyHolidays).sort();
+    
+    if (sortedDates.length === 0) {
+        list.innerHTML = '<p style="color: #999; text-align: center;">休日が登録されていません</p>';
+        return;
+    }
+    
+    list.innerHTML = sortedDates.map(dateStr => {
+        const date = new Date(dateStr);
+        const formatted = formatDate(date, true);
+        return `
+            <div class="holiday-item">
+                <span>${formatted} - ${companyHolidays[dateStr]}</span>
+                <button class="delete-btn" onclick="deleteCompanyHoliday('${dateStr}')">削除</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function addCompanyHoliday() {
+    const dateInput = document.getElementById('new-holiday-date');
+    const nameInput = document.getElementById('new-holiday-name');
+    
+    const date = dateInput.value;
+    const name = nameInput.value.trim();
+    
+    if (!date) {
+        alert('日付を選択してください');
+        return;
+    }
+    
+    if (!name) {
+        alert('休日名を入力してください');
+        return;
+    }
+    
+    companyHolidays[date] = name;
+    saveCompanyHolidays();
+    
+    dateInput.value = '';
+    nameInput.value = '';
+    
+    renderCompanyHolidayList();
+    refreshAllDates();
+}
+
+function deleteCompanyHoliday(dateStr) {
+    if (confirm(`${companyHolidays[dateStr]}を削除しますか？`)) {
+        delete companyHolidays[dateStr];
+        saveCompanyHolidays();
+        renderCompanyHolidayList();
+        refreshAllDates();
+    }
+}
+
+function clearAllHolidays() {
+    if (confirm('全ての自社休日を削除しますか？')) {
+        companyHolidays = {};
+        saveCompanyHolidays();
+        renderCompanyHolidayList();
+        refreshAllDates();
+    }
+}
+
+function refreshAllDates() {
+    const now = new Date();
+    
+    // 今日の祝日
+    const todayHoliday = checkHoliday(now);
+    const todayHolidayEl = document.getElementById('today-holiday');
+    if (todayHoliday) {
+        todayHolidayEl.innerText = todayHoliday.type === 'national' 
+            ? `🎌 ${todayHoliday.name}` 
+            : `🏢 ${todayHoliday.name}`;
+    } else {
+        todayHolidayEl.innerText = '';
+    }
+    
+    // 固定日数
+    [7, 14, 28, 56, 84].forEach(num => {
+        updateDateCard(`date-${num}`, addDays(now, num));
+    });
+    
+    // 動的
+    const val = parseInt(document.getElementById('input-dd').value) || 0;
+    updateDateCard('dynamic-result', addDays(now, val));
+    
+    // カレンダー
+    generateCalendar();
+}
+
+// PWA設定
+let deferredPrompt;
+
+function setupPWA() {
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // バナー表示
+        const banner = document.getElementById('install-banner');
+        banner.classList.add('show');
+    });
+    
+    document.getElementById('install-btn').addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const result = await deferredPrompt.userChoice;
+            console.log('Install result:', result.outcome);
+            deferredPrompt = null;
+            document.getElementById('install-banner').classList.remove('show');
+        }
+    });
+    
+    document.getElementById('dismiss-btn').addEventListener('click', () => {
+        document.getElementById('install-banner').classList.remove('show');
+    });
+}
+
+// Service Worker登録
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('SW registered:', reg.scope))
+            .catch(err => console.log('SW registration failed:', err));
+    });
+}
+
+init();
+</script>
+
+</body>
+</html>
