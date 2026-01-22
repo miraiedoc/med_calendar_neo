@@ -49,18 +49,31 @@
             margin-bottom: 15px;
         }
 
-        .settings-btn {
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .settings-btn, .help-btn {
             background: var(--accent-color);
             color: white;
             border: none;
             padding: 8px 12px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 1rem;
+        }
+
+        .help-btn {
+            background: #27ae60;
         }
 
         .settings-btn:hover {
             background: #2980b9;
+        }
+
+        .help-btn:hover {
+            background: #219a52;
         }
 
         /* 本日の日付 */
@@ -259,6 +272,55 @@
             line-height: 1.1;
         }
 
+        /* 選択日表示 */
+        .selected-date-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+
+        .selected-date-info.show {
+            display: block;
+        }
+
+        .selected-date-info .date-text {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .selected-date-info .days-diff {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .selected-date-info .days-diff.past {
+            color: #ffcdd2;
+        }
+
+        .selected-date-info .days-diff.future {
+            color: #c8e6c9;
+        }
+
+        .selected-date-info .days-diff.today {
+            color: #fff59d;
+        }
+
+        .calendar-table td {
+            cursor: pointer;
+        }
+
+        .calendar-table td:hover {
+            background: #f0f0f0;
+        }
+
+        .calendar-table td.selected {
+            background: #e8d5f0;
+        }
+
         /* 凡例 */
         .legend {
             display: flex;
@@ -445,6 +507,83 @@
             font-size: 1.2rem;
             margin-left: 10px;
         }
+
+        /* マニュアルスタイル */
+        .manual-content {
+            max-height: 85vh;
+        }
+
+        .manual-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .manual-section:last-of-type {
+            border-bottom: none;
+        }
+
+        .manual-section h3 {
+            color: var(--accent-color);
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+        }
+
+        .manual-item {
+            margin-bottom: 12px;
+        }
+
+        .manual-item h4 {
+            font-size: 0.95rem;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .manual-item p {
+            font-size: 0.9rem;
+            color: #555;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .manual-list {
+            margin: 5px 0;
+            padding-left: 20px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .manual-list li {
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .color-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        .color-dot.red { background: var(--holiday-red); }
+        .color-dot.blue { background: var(--saturday-blue); }
+        .color-dot.purple { background: var(--company-holiday); }
+
+        .manual-footer {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .manual-footer p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -461,7 +600,10 @@
 
     <div class="header">
         <h1 style="margin: 0; font-size: 1.2rem;">診療支援カレンダー</h1>
-        <button class="settings-btn" id="open-settings">⚙️ 設定</button>
+        <div class="header-buttons">
+            <button class="help-btn" id="open-manual">❓</button>
+            <button class="settings-btn" id="open-settings">⚙️</button>
+        </div>
     </div>
 
     <div class="today-section">
@@ -507,6 +649,11 @@
 
     <div id="calendar-area"></div>
 
+    <div class="selected-date-info" id="selected-date-info">
+        <div class="date-text" id="selected-date-text">----年--月--日</div>
+        <div class="days-diff" id="days-diff-text">今日から◯日後</div>
+    </div>
+
     <div class="legend">
         <div class="legend-item">
             <span class="legend-dot holiday"></span>
@@ -542,6 +689,87 @@
         <div class="setting-section">
             <h3>🔄 データ管理</h3>
             <button class="add-btn" id="clear-all-btn" style="background: var(--holiday-red);">全ての自社休日を削除</button>
+        </div>
+    </div>
+</div>
+
+<!-- マニュアルモーダル -->
+<div class="modal" id="manual-modal">
+    <div class="modal-content manual-content">
+        <div class="modal-header">
+            <h2>📖 使い方マニュアル</h2>
+            <button class="close-btn" id="close-manual">×</button>
+        </div>
+
+        <div class="manual-section">
+            <h3>🏠 基本機能</h3>
+            <div class="manual-item">
+                <h4>日数計算（6マス）</h4>
+                <p>今日から <strong>7日後・14日後・28日後・56日後・84日後</strong> の日付を自動表示します。処方日数の目安としてお使いください。</p>
+            </div>
+            <div class="manual-item">
+                <h4>任意の日数計算</h4>
+                <p>右下のオレンジ枠に数字を入力すると、任意の日数後の日付を計算できます。</p>
+            </div>
+        </div>
+
+        <div class="manual-section">
+            <h3>📅 カレンダー機能</h3>
+            <div class="manual-item">
+                <h4>日付タップ</h4>
+                <p>カレンダーの日付をタップすると、<strong>今日から何日後（または何日前）</strong>かを表示します。</p>
+            </div>
+            <div class="manual-item">
+                <h4>月の移動</h4>
+                <p>「◀ 前月」「翌月 ▶」ボタンで表示月を切り替えられます。</p>
+            </div>
+        </div>
+
+        <div class="manual-section">
+            <h3>🎌 祝日表示</h3>
+            <div class="manual-item">
+                <h4>色の意味</h4>
+                <ul class="manual-list">
+                    <li><span class="color-dot red"></span><strong>赤色</strong>：日曜・祝日</li>
+                    <li><span class="color-dot blue"></span><strong>青色</strong>：土曜</li>
+                    <li><span class="color-dot purple"></span><strong>紫色</strong>：自社休日</li>
+                </ul>
+            </div>
+            <div class="manual-item">
+                <h4>対応祝日</h4>
+                <p>元日、成人の日、建国記念の日、天皇誕生日、春分の日、昭和の日、憲法記念日、みどりの日、こどもの日、海の日、山の日、敬老の日、秋分の日、スポーツの日、文化の日、勤労感謝の日、振替休日、国民の休日</p>
+            </div>
+        </div>
+
+        <div class="manual-section">
+            <h3>⚙️ 自社休日の設定</h3>
+            <div class="manual-item">
+                <h4>休日の追加</h4>
+                <ol class="manual-list">
+                    <li>右上の「⚙️」ボタンをタップ</li>
+                    <li>日付を選択</li>
+                    <li>休日名を入力（例：創立記念日）</li>
+                    <li>「追加」ボタンをタップ</li>
+                </ol>
+            </div>
+            <div class="manual-item">
+                <h4>休日の削除</h4>
+                <p>設定画面の一覧から個別に削除、または「全ての自社休日を削除」で一括削除できます。</p>
+            </div>
+        </div>
+
+        <div class="manual-section">
+            <h3>📱 スマホでの使い方</h3>
+            <div class="manual-item">
+                <h4>ホーム画面に追加</h4>
+                <p><strong>iPhone</strong>：Safari → 共有ボタン → 「ホーム画面に追加」</p>
+                <p><strong>Android</strong>：Chrome → メニュー → 「ホーム画面に追加」</p>
+                <p>追加するとアプリのように使え、オフラインでも動作します。</p>
+            </div>
+        </div>
+
+        <div class="manual-footer">
+            <p>💡 ご不明点があればお気軽にお問い合わせください</p>
         </div>
     </div>
 </div>
@@ -748,6 +976,13 @@ function init() {
         if (e.target.id === 'settings-modal') closeSettings();
     });
     
+    // マニュアルモーダル
+    document.getElementById('open-manual').addEventListener('click', openManual);
+    document.getElementById('close-manual').addEventListener('click', closeManual);
+    document.getElementById('manual-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'manual-modal') closeManual();
+    });
+    
     // 休日追加
     document.getElementById('add-holiday-btn').addEventListener('click', addCompanyHoliday);
     document.getElementById('clear-all-btn').addEventListener('click', clearAllHolidays);
@@ -809,8 +1044,9 @@ function generateCalendar() {
         }
         
         const todayClass = isToday ? ' today' : '';
+        const dateKey = `${year}-${month}-${d}`;
         
-        html += `<td>
+        html += `<td data-date="${dateKey}" onclick="selectDate(${year}, ${month}, ${d})">
             <div class="calendar-day">
                 <span class="day-num ${dayClass}${todayClass}">${d}</span>
                 ${holidayHtml}
@@ -834,6 +1070,58 @@ function generateCalendar() {
     document.getElementById('calendar-area').innerHTML = html;
 }
 
+// 日付選択時の処理
+function selectDate(year, month, day) {
+    const selectedDate = new Date(year, month, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    // 日数差を計算
+    const diffTime = selectedDate - today;
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    // 選択状態をリセット
+    document.querySelectorAll('.calendar-table td.selected').forEach(td => {
+        td.classList.remove('selected');
+    });
+    
+    // 選択した日付をハイライト
+    const dateKey = `${year}-${month}-${day}`;
+    const selectedTd = document.querySelector(`td[data-date="${dateKey}"]`);
+    if (selectedTd) {
+        selectedTd.classList.add('selected');
+    }
+    
+    // 表示を更新
+    const infoArea = document.getElementById('selected-date-info');
+    const dateText = document.getElementById('selected-date-text');
+    const daysText = document.getElementById('days-diff-text');
+    
+    dateText.innerText = formatDate(selectedDate, true);
+    
+    // 祝日情報も表示
+    const holiday = checkHoliday(selectedDate);
+    if (holiday) {
+        dateText.innerText += ` 🎌 ${holiday.name}`;
+    }
+    
+    // 日数差の表示
+    daysText.className = 'days-diff';
+    if (diffDays === 0) {
+        daysText.innerText = '📍 今日';
+        daysText.classList.add('today');
+    } else if (diffDays > 0) {
+        daysText.innerText = `今日から ${diffDays}日後`;
+        daysText.classList.add('future');
+    } else {
+        daysText.innerText = `今日から ${Math.abs(diffDays)}日前`;
+        daysText.classList.add('past');
+    }
+    
+    infoArea.classList.add('show');
+}
+
 // 設定モーダル
 function openSettings() {
     document.getElementById('settings-modal').classList.add('active');
@@ -842,6 +1130,15 @@ function openSettings() {
 
 function closeSettings() {
     document.getElementById('settings-modal').classList.remove('active');
+}
+
+// マニュアルモーダル
+function openManual() {
+    document.getElementById('manual-modal').classList.add('active');
+}
+
+function closeManual() {
+    document.getElementById('manual-modal').classList.remove('active');
 }
 
 function renderCompanyHolidayList() {
