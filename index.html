@@ -282,6 +282,24 @@
             line-height: 1.1;
         }
 
+        .day-status {
+            font-size: 0.55rem;
+            padding: 1px 3px;
+            border-radius: 3px;
+            margin-top: 2px;
+            display: inline-block;
+        }
+
+        .day-status.open {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .day-status.closed {
+            background: #ffcdd2;
+            color: #c62828;
+        }
+
         /* 選択日表示 */
         .selected-date-info {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -321,6 +339,7 @@
 
         .calendar-table td {
             cursor: pointer;
+            position: relative;
         }
 
         .calendar-table td:hover {
@@ -329,6 +348,14 @@
 
         .calendar-table td.selected {
             background: #e8d5f0;
+        }
+
+        .calendar-table td.closed-day {
+            background: #ffebee;
+        }
+
+        .calendar-table td.closed-day:hover {
+            background: #ffcdd2;
         }
 
         /* 凡例 */
@@ -354,6 +381,14 @@
 
         .legend-dot.holiday { background: var(--holiday-red); }
         .legend-dot.company { background: var(--company-holiday); }
+
+        .legend-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+        }
+
+        .legend-box.closed { background: #ffebee; border: 1px solid #ffcdd2; }
 
         /* モーダル */
         .modal {
@@ -697,8 +732,12 @@
 
     <div class="legend">
         <div class="legend-item">
+            <span class="legend-box closed"></span>
+            <span>休診日</span>
+        </div>
+        <div class="legend-item">
             <span class="legend-dot holiday"></span>
-            <span>定休日/祝日</span>
+            <span>祝日</span>
         </div>
         <div class="legend-item">
             <span class="legend-dot company"></span>
@@ -777,9 +816,18 @@
             <div class="manual-item">
                 <h4>色の意味</h4>
                 <ul class="manual-list">
-                    <li><span class="color-dot red"></span><strong>赤色</strong>：日曜・月曜（定休日）・祝日</li>
-                    <li><span class="color-dot blue"></span><strong>青色</strong>：土曜</li>
-                    <li><span class="color-dot purple"></span><strong>紫色</strong>：臨時休日</li>
+                    <li><strong>薄赤背景</strong>：休診日（日曜・月曜・臨時休日）</li>
+                    <li><span class="color-dot red"></span><strong>赤文字</strong>：日曜・月曜・祝日</li>
+                    <li><span class="color-dot blue"></span><strong>青文字</strong>：土曜</li>
+                    <li><span class="color-dot purple"></span><strong>紫文字</strong>：臨時休日</li>
+                </ul>
+            </div>
+            <div class="manual-item">
+                <h4>祝日の営業/休診表示</h4>
+                <p>祝日には「営業」または「休診」のラベルが表示されます。</p>
+                <ul class="manual-list">
+                    <li><strong>緑ラベル「営業」</strong>：祝日でも診療あり</li>
+                    <li><strong>赤ラベル「休診」</strong>：祝日で休診（日曜・月曜または臨時休日と重なる場合）</li>
                 </ul>
             </div>
             <div class="manual-item">
@@ -1090,18 +1138,27 @@ function generateCalendar() {
         const dayOfWeek = currentDate.getDay();
         const isToday = currentDate.toDateString() === today.toDateString();
         const holiday = checkHoliday(currentDate);
+        const dateKey = formatDateKey(currentDate);
+        
+        // 休診日判定（日曜・月曜・臨時休日）
+        const isRegularClosed = (dayOfWeek === 0 || dayOfWeek === 1);
+        const isCompanyHoliday = companyHolidays[dateKey] ? true : false;
+        const isClosed = isRegularClosed || isCompanyHoliday;
         
         let dayClass = '';
         let holidayHtml = '';
+        let cellClass = isClosed ? 'closed-day' : '';
         
-        if (holiday) {
-            if (holiday.type === 'national') {
-                dayClass = 'holiday';
-                holidayHtml = `<span class="day-holiday-name">${holiday.name}</span>`;
-            } else {
-                dayClass = 'company-holiday';
-                holidayHtml = `<span class="day-company-holiday">${holiday.name}</span>`;
-            }
+        // 祝日の場合
+        if (holiday && holiday.type === 'national') {
+            dayClass = 'holiday';
+            const statusClass = isClosed ? 'closed' : 'open';
+            const statusText = isClosed ? '休診' : '営業';
+            holidayHtml = `<span class="day-holiday-name">${holiday.name}</span><span class="day-status ${statusClass}">${statusText}</span>`;
+        } else if (isCompanyHoliday) {
+            // 臨時休日（祝日でない）
+            dayClass = 'company-holiday';
+            holidayHtml = `<span class="day-company-holiday">${companyHolidays[dateKey]}</span>`;
         } else if (dayOfWeek === 0) {
             dayClass = 'sunday';
         } else if (dayOfWeek === 1) {
@@ -1111,9 +1168,9 @@ function generateCalendar() {
         }
         
         const todayClass = isToday ? ' today' : '';
-        const dateKey = `${year}-${month}-${d}`;
+        const dateKeyAttr = `${year}-${month}-${d}`;
         
-        html += `<td data-date="${dateKey}" onclick="selectDate(${year}, ${month}, ${d})">
+        html += `<td class="${cellClass}" data-date="${dateKeyAttr}" onclick="selectDate(${year}, ${month}, ${d})">
             <div class="calendar-day">
                 <span class="day-num ${dayClass}${todayClass}">${d}</span>
                 ${holidayHtml}
