@@ -207,6 +207,14 @@
             background: #2980b9;
         }
 
+        .nav-btn.today-btn {
+            background: #e74c3c;
+        }
+
+        .nav-btn.today-btn:hover {
+            background: #c0392b;
+        }
+
         .calendar-title {
             font-weight: bold;
             font-size: 1.1rem;
@@ -420,12 +428,28 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 5px 0;
+            padding: 8px 0;
             border-bottom: 1px solid #eee;
         }
 
         .holiday-item:last-child {
             border-bottom: none;
+        }
+
+        .holiday-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .holiday-name-text {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .holiday-date-text {
+            font-size: 0.85rem;
+            color: #666;
         }
 
         .delete-btn {
@@ -440,26 +464,40 @@
 
         .add-holiday {
             display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 10px;
         }
 
-        .add-holiday input[type="date"],
+        .date-range-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .date-range-separator {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .date-name-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .add-holiday input[type="date"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            flex: 1;
+        }
+
         .add-holiday input[type="text"] {
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 0.9rem;
-        }
-
-        .add-holiday input[type="date"] {
             flex: 1;
-            min-width: 140px;
-        }
-
-        .add-holiday input[type="text"] {
-            flex: 2;
-            min-width: 150px;
         }
 
         .add-btn {
@@ -645,6 +683,7 @@
 
     <div class="calendar-nav">
         <button class="nav-btn" id="prev-month">◀ 前月</button>
+        <button class="nav-btn today-btn" id="go-today">本日</button>
         <span class="calendar-title" id="calendar-title">----年 --月</span>
         <button class="nav-btn" id="next-month">翌月 ▶</button>
     </div>
@@ -682,9 +721,15 @@
                 <p style="color: #999; text-align: center;">臨時休日が登録されていません</p>
             </div>
             <div class="add-holiday">
-                <input type="date" id="new-holiday-date">
-                <input type="text" id="new-holiday-name" placeholder="休日名（例：創立記念日）">
-                <button class="add-btn" id="add-holiday-btn">追加</button>
+                <div class="date-range-row">
+                    <input type="date" id="new-holiday-start" title="開始日">
+                    <span class="date-range-separator">〜</span>
+                    <input type="date" id="new-holiday-end" title="終了日（1日のみの場合は空欄）">
+                </div>
+                <div class="date-name-row">
+                    <input type="text" id="new-holiday-name" placeholder="休日名（例：年末年始、夏季休暇）">
+                    <button class="add-btn" id="add-holiday-btn">追加</button>
+                </div>
             </div>
         </div>
 
@@ -750,14 +795,24 @@
                 <p>定休日（日曜・月曜）以外の臨時休日を登録できます。</p>
                 <ol class="manual-list">
                     <li>右上の「⚙️」ボタンをタップ</li>
-                    <li>日付を選択</li>
-                    <li>休日名を入力（例：年末年始、研修日）</li>
+                    <li>開始日を選択</li>
+                    <li>終了日を選択（1日のみの場合は空欄でOK）</li>
+                    <li>休日名を入力</li>
                     <li>「追加」ボタンをタップ</li>
                 </ol>
             </div>
             <div class="manual-item">
+                <h4>登録例</h4>
+                <ul class="manual-list">
+                    <li><strong>1日だけ</strong>：開始日のみ入力 → 「研修日」</li>
+                    <li><strong>年末年始</strong>：12/28 〜 1/3 → 「年末年始休暇」</li>
+                    <li><strong>夏季休暇</strong>：8/13 〜 8/16 → 「夏季休暇」</li>
+                    <li><strong>GW</strong>：5/3 〜 5/6 → 「GW休暇」</li>
+                </ul>
+            </div>
+            <div class="manual-item">
                 <h4>休日の削除</h4>
-                <p>設定画面の一覧から個別に削除、または「全ての臨時休日を削除」で一括削除できます。</p>
+                <p>設定画面の一覧から期間ごとに削除、または「全ての臨時休日を削除」で一括削除できます。</p>
             </div>
         </div>
 
@@ -999,6 +1054,13 @@ function init() {
         currentDisplayMonth.setMonth(currentDisplayMonth.getMonth() + 1);
         generateCalendar();
     });
+    document.getElementById('go-today').addEventListener('click', () => {
+        const today = new Date();
+        currentDisplayMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        generateCalendar();
+        // 選択表示をクリア
+        document.getElementById('selected-date-info').classList.remove('show');
+    });
     
     // PWAインストール
     setupPWA();
@@ -1155,27 +1217,102 @@ function renderCompanyHolidayList() {
         return;
     }
     
-    list.innerHTML = sortedDates.map(dateStr => {
+    // 連続する同名の休日をグループ化
+    const groups = [];
+    let currentGroup = null;
+    
+    sortedDates.forEach(dateStr => {
+        const name = companyHolidays[dateStr];
         const date = new Date(dateStr);
-        const formatted = formatDate(date, true);
+        
+        if (currentGroup && 
+            currentGroup.name === name && 
+            isNextDay(currentGroup.endDate, date)) {
+            // 同じ名前で連続している場合はグループを拡張
+            currentGroup.endDate = date;
+            currentGroup.endStr = dateStr;
+        } else {
+            // 新しいグループを開始
+            if (currentGroup) groups.push(currentGroup);
+            currentGroup = {
+                name: name,
+                startDate: date,
+                endDate: date,
+                startStr: dateStr,
+                endStr: dateStr
+            };
+        }
+    });
+    if (currentGroup) groups.push(currentGroup);
+    
+    list.innerHTML = groups.map(group => {
+        const startFormatted = formatDate(group.startDate, true);
+        let displayText;
+        
+        if (group.startStr === group.endStr) {
+            // 1日のみ
+            displayText = `${startFormatted}`;
+        } else {
+            // 期間
+            const endFormatted = formatDate(group.endDate, false);
+            displayText = `${startFormatted} 〜 ${endFormatted}`;
+        }
+        
         return `
             <div class="holiday-item">
-                <span>${formatted} - ${companyHolidays[dateStr]}</span>
-                <button class="delete-btn" onclick="deleteCompanyHoliday('${dateStr}')">削除</button>
+                <div class="holiday-info">
+                    <span class="holiday-name-text">${group.name}</span>
+                    <span class="holiday-date-text">${displayText}</span>
+                </div>
+                <button class="delete-btn" onclick="deleteCompanyHolidayGroup('${group.startStr}', '${group.endStr}', '${group.name}')">削除</button>
             </div>
         `;
     }).join('');
 }
 
+// 翌日かどうかをチェック
+function isNextDay(date1, date2) {
+    const next = new Date(date1);
+    next.setDate(next.getDate() + 1);
+    return next.toDateString() === date2.toDateString();
+}
+
+// グループ単位で削除
+function deleteCompanyHolidayGroup(startStr, endStr, name) {
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    
+    let message;
+    if (startStr === endStr) {
+        message = `「${name}」(${formatDate(start, false)})を削除しますか？`;
+    } else {
+        message = `「${name}」(${formatDate(start, false)} 〜 ${formatDate(end, false)})を削除しますか？`;
+    }
+    
+    if (confirm(message)) {
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dateKey = formatDateKey(d);
+            if (companyHolidays[dateKey] === name) {
+                delete companyHolidays[dateKey];
+            }
+        }
+        saveCompanyHolidays();
+        renderCompanyHolidayList();
+        refreshAllDates();
+    }
+}
+
 function addCompanyHoliday() {
-    const dateInput = document.getElementById('new-holiday-date');
+    const startInput = document.getElementById('new-holiday-start');
+    const endInput = document.getElementById('new-holiday-end');
     const nameInput = document.getElementById('new-holiday-name');
     
-    const date = dateInput.value;
+    const startDate = startInput.value;
+    const endDate = endInput.value;
     const name = nameInput.value.trim();
     
-    if (!date) {
-        alert('日付を選択してください');
+    if (!startDate) {
+        alert('開始日を選択してください');
         return;
     }
     
@@ -1184,23 +1321,38 @@ function addCompanyHoliday() {
         return;
     }
     
-    companyHolidays[date] = name;
+    // 終了日が空の場合は開始日と同じ（1日のみ）
+    const actualEndDate = endDate || startDate;
+    
+    // 開始日が終了日より後の場合はエラー
+    if (startDate > actualEndDate) {
+        alert('終了日は開始日以降の日付を選択してください');
+        return;
+    }
+    
+    // 期間内の全ての日付を登録
+    const start = new Date(startDate);
+    const end = new Date(actualEndDate);
+    let addedCount = 0;
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateKey = formatDateKey(d);
+        companyHolidays[dateKey] = name;
+        addedCount++;
+    }
+    
     saveCompanyHolidays();
     
-    dateInput.value = '';
+    startInput.value = '';
+    endInput.value = '';
     nameInput.value = '';
+    
+    if (addedCount > 1) {
+        alert(`${addedCount}日間の休日「${name}」を追加しました`);
+    }
     
     renderCompanyHolidayList();
     refreshAllDates();
-}
-
-function deleteCompanyHoliday(dateStr) {
-    if (confirm(`${companyHolidays[dateStr]}を削除しますか？`)) {
-        delete companyHolidays[dateStr];
-        saveCompanyHolidays();
-        renderCompanyHolidayList();
-        refreshAllDates();
-    }
 }
 
 function clearAllHolidays() {
