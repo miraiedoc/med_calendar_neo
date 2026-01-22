@@ -230,6 +230,7 @@
         }
 
         .calendar-table th:first-child { color: var(--holiday-red); }
+        .calendar-table th:nth-child(2) { color: var(--holiday-red); }
         .calendar-table th:last-child { color: var(--saturday-blue); }
 
         .calendar-day {
@@ -245,6 +246,7 @@
         }
 
         .day-num.sunday { color: var(--holiday-red); }
+        .day-num.monday { color: var(--holiday-red); }
         .day-num.saturday { color: var(--saturday-blue); }
         .day-num.holiday { color: var(--holiday-red); }
         .day-num.company-holiday { color: var(--company-holiday); }
@@ -657,11 +659,11 @@
     <div class="legend">
         <div class="legend-item">
             <span class="legend-dot holiday"></span>
-            <span>祝日</span>
+            <span>定休日/祝日</span>
         </div>
         <div class="legend-item">
             <span class="legend-dot company"></span>
-            <span>自社休日</span>
+            <span>臨時休日</span>
         </div>
     </div>
 </div>
@@ -670,14 +672,14 @@
 <div class="modal" id="settings-modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>⚙️ 休日設定</h2>
+            <h2>⚙️ 臨時休日設定</h2>
             <button class="close-btn" id="close-settings">×</button>
         </div>
 
         <div class="setting-section">
-            <h3>📅 自社休日一覧</h3>
+            <h3>📅 臨時休日一覧</h3>
             <div class="holiday-list" id="company-holiday-list">
-                <p style="color: #999; text-align: center;">休日が登録されていません</p>
+                <p style="color: #999; text-align: center;">臨時休日が登録されていません</p>
             </div>
             <div class="add-holiday">
                 <input type="date" id="new-holiday-date">
@@ -688,7 +690,7 @@
 
         <div class="setting-section">
             <h3>🔄 データ管理</h3>
-            <button class="add-btn" id="clear-all-btn" style="background: var(--holiday-red);">全ての自社休日を削除</button>
+            <button class="add-btn" id="clear-all-btn" style="background: var(--holiday-red);">全ての臨時休日を削除</button>
         </div>
     </div>
 </div>
@@ -730,9 +732,9 @@
             <div class="manual-item">
                 <h4>色の意味</h4>
                 <ul class="manual-list">
-                    <li><span class="color-dot red"></span><strong>赤色</strong>：日曜・祝日</li>
+                    <li><span class="color-dot red"></span><strong>赤色</strong>：日曜・月曜（定休日）・祝日</li>
                     <li><span class="color-dot blue"></span><strong>青色</strong>：土曜</li>
-                    <li><span class="color-dot purple"></span><strong>紫色</strong>：自社休日</li>
+                    <li><span class="color-dot purple"></span><strong>紫色</strong>：臨時休日</li>
                 </ul>
             </div>
             <div class="manual-item">
@@ -742,19 +744,20 @@
         </div>
 
         <div class="manual-section">
-            <h3>⚙️ 自社休日の設定</h3>
+            <h3>⚙️ 臨時休日の設定</h3>
             <div class="manual-item">
                 <h4>休日の追加</h4>
+                <p>定休日（日曜・月曜）以外の臨時休日を登録できます。</p>
                 <ol class="manual-list">
                     <li>右上の「⚙️」ボタンをタップ</li>
                     <li>日付を選択</li>
-                    <li>休日名を入力（例：創立記念日）</li>
+                    <li>休日名を入力（例：年末年始、研修日）</li>
                     <li>「追加」ボタンをタップ</li>
                 </ol>
             </div>
             <div class="manual-item">
                 <h4>休日の削除</h4>
-                <p>設定画面の一覧から個別に削除、または「全ての自社休日を削除」で一括削除できます。</p>
+                <p>設定画面の一覧から個別に削除、または「全ての臨時休日を削除」で一括削除できます。</p>
             </div>
         </div>
 
@@ -1039,6 +1042,8 @@ function generateCalendar() {
             }
         } else if (dayOfWeek === 0) {
             dayClass = 'sunday';
+        } else if (dayOfWeek === 1) {
+            dayClass = 'monday';
         } else if (dayOfWeek === 6) {
             dayClass = 'saturday';
         }
@@ -1146,7 +1151,7 @@ function renderCompanyHolidayList() {
     const sortedDates = Object.keys(companyHolidays).sort();
     
     if (sortedDates.length === 0) {
-        list.innerHTML = '<p style="color: #999; text-align: center;">休日が登録されていません</p>';
+        list.innerHTML = '<p style="color: #999; text-align: center;">臨時休日が登録されていません</p>';
         return;
     }
     
@@ -1199,7 +1204,7 @@ function deleteCompanyHoliday(dateStr) {
 }
 
 function clearAllHolidays() {
-    if (confirm('全ての自社休日を削除しますか？')) {
+    if (confirm('全ての臨時休日を削除しますか？')) {
         companyHolidays = {};
         saveCompanyHolidays();
         renderCompanyHolidayList();
