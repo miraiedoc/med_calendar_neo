@@ -150,6 +150,19 @@
             display: block;
         }
 
+        .closed-warning {
+            font-size: 0.85rem;
+            color: var(--holiday-red);
+            font-weight: bold;
+            display: block;
+        }
+
+        .next-open {
+            font-size: 0.8rem;
+            color: #2e7d32;
+            display: block;
+        }
+
         /* 動的入力 */
         .dynamic-input {
             display: flex;
@@ -253,8 +266,7 @@
             font-weight: bold;
         }
 
-        .day-num.sunday { color: var(--holiday-red); }
-        .day-num.monday { color: var(--holiday-red); }
+        .day-num.closed-weekday { color: var(--holiday-red); }
         .day-num.saturday { color: var(--saturday-blue); }
         .day-num.holiday { color: var(--holiday-red); }
         .day-num.company-holiday { color: var(--company-holiday); }
@@ -548,6 +560,47 @@
             background: #2980b9;
         }
 
+        /* 医院設定 */
+        .clinic-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .clinic-settings input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        .setting-label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .weekday-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .weekday-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .data-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
         /* PWA インストールバナー */
         .install-banner {
             display: none;
@@ -674,7 +727,7 @@
     </div>
 
     <div class="header">
-        <h1 style="margin: 0; font-size: 1.2rem;">診療支援カレンダー</h1>
+        <h1 id="app-title" style="margin: 0; font-size: 1.2rem;">診療支援カレンダー</h1>
         <div class="header-buttons">
             <button class="help-btn" id="open-manual">まにゅ</button>
             <button class="settings-btn" id="open-settings">⚙️</button>
@@ -750,8 +803,29 @@
 <div class="modal" id="settings-modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>⚙️ 臨時休日設定</h2>
+            <h2>⚙️ 設定</h2>
             <button class="close-btn" id="close-settings">×</button>
+        </div>
+
+        <div class="setting-section">
+            <h3>🏥 医院設定</h3>
+            <div class="clinic-settings">
+                <label class="setting-label" for="clinic-name-input">医院名</label>
+                <input type="text" id="clinic-name-input" placeholder="例：〇〇クリニック（空欄可）">
+                <span class="setting-label">休診曜日（定休日）</span>
+                <div class="weekday-checkboxes">
+                    <label><input type="checkbox" class="closed-weekday-cb" value="0">日</label>
+                    <label><input type="checkbox" class="closed-weekday-cb" value="1">月</label>
+                    <label><input type="checkbox" class="closed-weekday-cb" value="2">火</label>
+                    <label><input type="checkbox" class="closed-weekday-cb" value="3">水</label>
+                    <label><input type="checkbox" class="closed-weekday-cb" value="4">木</label>
+                    <label><input type="checkbox" class="closed-weekday-cb" value="5">金</label>
+                    <label><input type="checkbox" class="closed-weekday-cb" value="6">土</label>
+                </div>
+                <div>
+                    <button class="add-btn" id="save-clinic-settings-btn">保存</button>
+                </div>
+            </div>
         </div>
 
         <div class="setting-section">
@@ -774,7 +848,12 @@
 
         <div class="setting-section">
             <h3>🔄 データ管理</h3>
-            <button class="add-btn" id="clear-all-btn" style="background: var(--holiday-red);">全ての臨時休日を削除</button>
+            <div class="data-buttons">
+                <button class="add-btn" id="export-data-btn">書き出し（JSON）</button>
+                <button class="add-btn" id="import-data-btn">読み込み</button>
+                <input type="file" id="import-file-input" accept=".json,application/json" style="display: none;">
+                <button class="add-btn" id="clear-all-btn" style="background: var(--holiday-red);">全ての臨時休日を削除</button>
+            </div>
         </div>
     </div>
 </div>
@@ -816,8 +895,8 @@
             <div class="manual-item">
                 <h4>色の意味</h4>
                 <ul class="manual-list">
-                    <li><strong>薄赤背景</strong>：休診日（日曜・月曜・臨時休日）</li>
-                    <li><span class="color-dot red"></span><strong>赤文字</strong>：日曜・月曜・祝日</li>
+                    <li><strong>薄赤背景</strong>：休診日（定休日・臨時休日）</li>
+                    <li><span class="color-dot red"></span><strong>赤文字</strong>：定休日の曜日・祝日</li>
                     <li><span class="color-dot blue"></span><strong>青文字</strong>：土曜</li>
                     <li><span class="color-dot purple"></span><strong>紫文字</strong>：臨時休日</li>
                 </ul>
@@ -827,7 +906,7 @@
                 <p>祝日には「営業」または「休診」のラベルが表示されます。</p>
                 <ul class="manual-list">
                     <li><strong>緑ラベル「営業」</strong>：祝日でも診療あり</li>
-                    <li><strong>赤ラベル「休診」</strong>：祝日で休診（日曜・月曜または臨時休日と重なる場合）</li>
+                    <li><strong>赤ラベル「休診」</strong>：祝日で休診（定休日または臨時休日と重なる場合）</li>
                 </ul>
             </div>
             <div class="manual-item">
@@ -837,10 +916,22 @@
         </div>
 
         <div class="manual-section">
+            <h3>⚙️ 設定（医院設定・データ管理）</h3>
+            <div class="manual-item">
+                <h4>医院名と定休日</h4>
+                <p>医院名と定休日（休診曜日）は、右上の「⚙️」→「医院設定」で変更できます。初期設定は日曜・月曜が定休日です。</p>
+            </div>
+            <div class="manual-item">
+                <h4>書き出し・読み込み</h4>
+                <p>「データ管理」から設定と臨時休日をJSONファイルで書き出し／読み込みできます。他の端末や他院へ設定を移すときにご利用ください。</p>
+            </div>
+        </div>
+
+        <div class="manual-section">
             <h3>⚙️ 臨時休日の設定</h3>
             <div class="manual-item">
                 <h4>休日の追加</h4>
-                <p>定休日（日曜・月曜）以外の臨時休日を登録できます。</p>
+                <p>定休日以外の臨時休日を登録できます。</p>
                 <ol class="manual-list">
                     <li>右上の「⚙️」ボタンをタップ</li>
                     <li>開始日を選択</li>
@@ -912,7 +1003,7 @@ function getJapaneseHolidays(year) {
     // 振替休日の計算
     const addedSubstitutes = {};
     Object.keys(holidays).forEach(dateStr => {
-        const date = new Date(dateStr);
+        const date = parseDateKey(dateStr);
         if (date.getDay() === 0) { // 日曜日の場合
             let nextDay = new Date(date);
             nextDay.setDate(nextDay.getDate() + 1);
@@ -930,8 +1021,8 @@ function getJapaneseHolidays(year) {
     // 国民の休日（祝日に挟まれた平日）
     const sortedDates = Object.keys(holidays).sort();
     for (let i = 0; i < sortedDates.length - 1; i++) {
-        const current = new Date(sortedDates[i]);
-        const next = new Date(sortedDates[i + 1]);
+        const current = parseDateKey(sortedDates[i]);
+        const next = parseDateKey(sortedDates[i + 1]);
         const diff = (next - current) / (1000 * 60 * 60 * 24);
         if (diff === 2) {
             const between = new Date(current);
@@ -964,11 +1055,87 @@ function formatDateKey(date) {
     return `${y}-${m}-${d}`;
 }
 
+// 'YYYY-MM-DD' をローカル時刻の Date に変換（new Date(str) は UTC 解釈になるため使わない）
+function parseDateKey(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+// HTML エスケープ
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+const WEEKDAY_CHARS = ['日', '月', '火', '水', '木', '金', '土'];
+
 // 自社休日の管理
 let companyHolidays = JSON.parse(localStorage.getItem('companyHolidays') || '{}');
 
 function saveCompanyHolidays() {
     localStorage.setItem('companyHolidays', JSON.stringify(companyHolidays));
+}
+
+// 医院設定の管理
+const DEFAULT_CLOSED_WEEKDAYS = [0, 1];
+
+function isValidWeekdayArray(arr) {
+    return Array.isArray(arr) &&
+        arr.every(v => Number.isInteger(v) && v >= 0 && v <= 6);
+}
+
+function loadClinicSettings() {
+    const defaults = { clinicName: '', closedWeekdays: DEFAULT_CLOSED_WEEKDAYS.slice() };
+    let parsed;
+    try {
+        parsed = JSON.parse(localStorage.getItem('clinicSettings') || 'null');
+    } catch (e) {
+        return defaults;
+    }
+    if (!parsed || typeof parsed !== 'object') return defaults;
+    return {
+        clinicName: typeof parsed.clinicName === 'string' ? parsed.clinicName : '',
+        closedWeekdays: isValidWeekdayArray(parsed.closedWeekdays)
+            ? Array.from(new Set(parsed.closedWeekdays)).sort((a, b) => a - b)
+            : DEFAULT_CLOSED_WEEKDAYS.slice()
+    };
+}
+
+function saveClinicSettings() {
+    localStorage.setItem('clinicSettings', JSON.stringify(clinicSettings));
+}
+
+let clinicSettings = loadClinicSettings();
+
+// 医院名をタイトルに反映
+function applyClinicName() {
+    const name = clinicSettings.clinicName.trim();
+    const title = name ? `${name} 診療支援カレンダー` : '診療支援カレンダー';
+    document.getElementById('app-title').innerText = title;
+    document.title = title;
+}
+
+// 休診判定
+function isRegularClosed(date) {
+    return clinicSettings.closedWeekdays.includes(date.getDay());
+}
+
+function isClosedDay(date) {
+    return isRegularClosed(date) || !!companyHolidays[formatDateKey(date)];
+}
+
+// 翌日以降で最初の診療日（最大370日探索、見つからなければ null）
+function findNextOpenDay(date) {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    for (let i = 0; i < 370; i++) {
+        d.setDate(d.getDate() + 1);
+        if (!isClosedDay(d)) return new Date(d);
+    }
+    return null;
 }
 
 // 祝日キャッシュ
@@ -1026,26 +1193,42 @@ function updateDateCard(elementId, date) {
     if (holiday) {
         if (holiday.type === 'national') {
             element.className = 'date-value holiday';
-            html += `<span class="holiday-name">${holiday.name}</span>`;
+            html += `<span class="holiday-name">${escapeHtml(holiday.name)}</span>`;
         } else {
             element.className = 'date-value company-holiday';
-            html += `<span class="company-holiday-name">${holiday.name}</span>`;
+            html += `<span class="company-holiday-name">${escapeHtml(holiday.name)}</span>`;
         }
     } else {
         element.className = 'date-value';
     }
-    
+
+    // 休診日の警告と次の診療日
+    if (isClosedDay(date)) {
+        html += '<span class="closed-warning">⚠ 休診日</span>';
+        const nextOpen = findNextOpenDay(date);
+        if (nextOpen) {
+            const w = WEEKDAY_CHARS[nextOpen.getDay()];
+            html += `<span class="next-open">次の診療日：${nextOpen.getMonth() + 1}月${nextOpen.getDate()}日（${w}）</span>`;
+        }
+    }
+
     element.innerHTML = html;
 }
 
 // カレンダー表示月
 let currentDisplayMonth = new Date();
 
+// 日付変更の追随用
+let lastKnownDateKey = formatDateKey(new Date());
+
 // 初期化
 function init() {
     const now = new Date();
     currentDisplayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
+
+    // 医院名
+    applyClinicName();
+
     // 今日の日付
     document.getElementById('today-date').innerText = formatDate(now);
     
@@ -1069,7 +1252,8 @@ function init() {
     
     inputDD.addEventListener('input', () => {
         const val = parseInt(inputDD.value) || 0;
-        updateDateCard('dynamic-result', addDays(now, val));
+        // 日付変更後も正しく計算できるよう、毎回現在日時を基準にする
+        updateDateCard('dynamic-result', addDays(new Date(), val));
     });
     
     // カレンダー生成
@@ -1092,7 +1276,28 @@ function init() {
     // 休日追加
     document.getElementById('add-holiday-btn').addEventListener('click', addCompanyHoliday);
     document.getElementById('clear-all-btn').addEventListener('click', clearAllHolidays);
-    
+
+    // 医院設定
+    document.getElementById('save-clinic-settings-btn').addEventListener('click', saveClinicSettingsFromForm);
+
+    // 書き出し/読み込み
+    document.getElementById('export-data-btn').addEventListener('click', exportData);
+    const importFileInput = document.getElementById('import-file-input');
+    document.getElementById('import-data-btn').addEventListener('click', () => {
+        importFileInput.click();
+    });
+    importFileInput.addEventListener('change', () => {
+        const file = importFileInput.files && importFileInput.files[0];
+        if (file) importData(file);
+        importFileInput.value = ''; // 同じファイルを再選択できるようにリセット
+    });
+
+    // 日付変更への追随
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) checkDateChange();
+    });
+    scheduleMidnightTimer();
+
     // カレンダーナビゲーション
     document.getElementById('prev-month').addEventListener('click', () => {
         currentDisplayMonth.setMonth(currentDisplayMonth.getMonth() - 1);
@@ -1126,7 +1331,20 @@ function generateCalendar() {
     const lastDay = new Date(year, month + 1, 0);
     
     let html = '<table class="calendar-table">';
-    html += '<tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr><tr>';
+    // 曜日ヘッダー（休診曜日は赤、休診でない土曜は青）
+    html += '<tr>';
+    for (let w = 0; w < 7; w++) {
+        let color;
+        if (clinicSettings.closedWeekdays.includes(w)) {
+            color = 'var(--holiday-red)';
+        } else if (w === 6) {
+            color = 'var(--saturday-blue)';
+        } else {
+            color = 'var(--primary-color)';
+        }
+        html += `<th style="color: ${color};">${WEEKDAY_CHARS[w]}</th>`;
+    }
+    html += '</tr><tr>';
     
     // 1日目までの空白
     for (let i = 0; i < firstDay.getDay(); i++) {
@@ -1140,10 +1358,10 @@ function generateCalendar() {
         const holiday = checkHoliday(currentDate);
         const dateKey = formatDateKey(currentDate);
         
-        // 休診日判定（日曜・月曜・臨時休日）
-        const isRegularClosed = (dayOfWeek === 0 || dayOfWeek === 1);
+        // 休診日判定（休診曜日・臨時休日）
+        const isWeekdayClosed = isRegularClosed(currentDate);
         const isCompanyHoliday = companyHolidays[dateKey] ? true : false;
-        const isClosed = isRegularClosed || isCompanyHoliday;
+        const isClosed = isClosedDay(currentDate);
         
         let dayClass = '';
         let holidayHtml = '';
@@ -1154,15 +1372,13 @@ function generateCalendar() {
             dayClass = 'holiday';
             const statusClass = isClosed ? 'closed' : 'open';
             const statusText = isClosed ? '休診' : '営業';
-            holidayHtml = `<span class="day-holiday-name">${holiday.name}</span><span class="day-status ${statusClass}">${statusText}</span>`;
+            holidayHtml = `<span class="day-holiday-name">${escapeHtml(holiday.name)}</span><span class="day-status ${statusClass}">${statusText}</span>`;
         } else if (isCompanyHoliday) {
             // 臨時休日（祝日でない）
             dayClass = 'company-holiday';
-            holidayHtml = `<span class="day-company-holiday">${companyHolidays[dateKey]}</span>`;
-        } else if (dayOfWeek === 0) {
-            dayClass = 'sunday';
-        } else if (dayOfWeek === 1) {
-            dayClass = 'monday';
+            holidayHtml = `<span class="day-company-holiday">${escapeHtml(companyHolidays[dateKey])}</span>`;
+        } else if (isWeekdayClosed) {
+            dayClass = 'closed-weekday';
         } else if (dayOfWeek === 6) {
             dayClass = 'saturday';
         }
@@ -1229,6 +1445,11 @@ function selectDate(year, month, day) {
     if (holiday) {
         dateText.innerText += ` 🎌 ${holiday.name}`;
     }
+
+    // 休診日表示
+    if (isClosedDay(selectedDate)) {
+        dateText.innerText += '（休診日）';
+    }
     
     // 日数差の表示
     daysText.className = 'days-diff';
@@ -1249,7 +1470,34 @@ function selectDate(year, month, day) {
 // 設定モーダル
 function openSettings() {
     document.getElementById('settings-modal').classList.add('active');
+    populateSettingsForm();
     renderCompanyHolidayList();
+}
+
+// 現在の医院設定をフォームへ反映
+function populateSettingsForm() {
+    document.getElementById('clinic-name-input').value = clinicSettings.clinicName;
+    document.querySelectorAll('.closed-weekday-cb').forEach(cb => {
+        cb.checked = clinicSettings.closedWeekdays.includes(Number(cb.value));
+    });
+}
+
+// フォームの医院設定を保存
+function saveClinicSettingsFromForm() {
+    const name = document.getElementById('clinic-name-input').value.trim();
+    const weekdays = [];
+    document.querySelectorAll('.closed-weekday-cb').forEach(cb => {
+        const v = Number(cb.value);
+        if (cb.checked && Number.isInteger(v) && v >= 0 && v <= 6) weekdays.push(v);
+    });
+    clinicSettings = {
+        clinicName: name,
+        closedWeekdays: weekdays.sort((a, b) => a - b)
+    };
+    saveClinicSettings();
+    applyClinicName();
+    refreshAllDates();
+    alert('医院設定を保存しました');
 }
 
 function closeSettings() {
@@ -1265,22 +1513,26 @@ function closeManual() {
     document.getElementById('manual-modal').classList.remove('active');
 }
 
+// 臨時休日一覧の表示グループ（削除ボタンはインデックスで参照）
+let holidayGroups = [];
+
 function renderCompanyHolidayList() {
     const list = document.getElementById('company-holiday-list');
     const sortedDates = Object.keys(companyHolidays).sort();
-    
+
     if (sortedDates.length === 0) {
+        holidayGroups = [];
         list.innerHTML = '<p style="color: #999; text-align: center;">臨時休日が登録されていません</p>';
         return;
     }
-    
+
     // 連続する同名の休日をグループ化
     const groups = [];
     let currentGroup = null;
-    
+
     sortedDates.forEach(dateStr => {
         const name = companyHolidays[dateStr];
-        const date = new Date(dateStr);
+        const date = parseDateKey(dateStr);
         
         if (currentGroup && 
             currentGroup.name === name && 
@@ -1301,8 +1553,9 @@ function renderCompanyHolidayList() {
         }
     });
     if (currentGroup) groups.push(currentGroup);
-    
-    list.innerHTML = groups.map(group => {
+    holidayGroups = groups;
+
+    list.innerHTML = groups.map((group, index) => {
         const startFormatted = formatDate(group.startDate, true);
         let displayText;
         
@@ -1318,10 +1571,10 @@ function renderCompanyHolidayList() {
         return `
             <div class="holiday-item">
                 <div class="holiday-info">
-                    <span class="holiday-name-text">${group.name}</span>
+                    <span class="holiday-name-text">${escapeHtml(group.name)}</span>
                     <span class="holiday-date-text">${displayText}</span>
                 </div>
-                <button class="delete-btn" onclick="deleteCompanyHolidayGroup('${group.startStr}', '${group.endStr}', '${group.name}')">削除</button>
+                <button class="delete-btn" onclick="deleteCompanyHolidayByIndex(${index})">削除</button>
             </div>
         `;
     }).join('');
@@ -1334,10 +1587,17 @@ function isNextDay(date1, date2) {
     return next.toDateString() === date2.toDateString();
 }
 
+// 一覧のインデックスで削除（名前を onclick 属性に埋め込まないため）
+function deleteCompanyHolidayByIndex(index) {
+    const group = holidayGroups[index];
+    if (!group) return;
+    deleteCompanyHolidayGroup(group.startStr, group.endStr, group.name);
+}
+
 // グループ単位で削除
 function deleteCompanyHolidayGroup(startStr, endStr, name) {
-    const start = new Date(startStr);
-    const end = new Date(endStr);
+    const start = parseDateKey(startStr);
+    const end = parseDateKey(endStr);
     
     let message;
     if (startStr === endStr) {
@@ -1388,8 +1648,8 @@ function addCompanyHoliday() {
     }
     
     // 期間内の全ての日付を登録
-    const start = new Date(startDate);
-    const end = new Date(actualEndDate);
+    const start = parseDateKey(startDate);
+    const end = parseDateKey(actualEndDate);
     let addedCount = 0;
     
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
@@ -1446,6 +1706,116 @@ function refreshAllDates() {
     
     // カレンダー
     generateCalendar();
+}
+
+// 設定・臨時休日の書き出し
+function exportData() {
+    const data = {
+        version: 1,
+        clinicSettings: clinicSettings,
+        companyHolidays: companyHolidays
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'calendar-settings.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// 読み込みデータの形式検証
+function isValidImportData(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+    if (data.version !== 1) return false;
+
+    const cs = data.clinicSettings;
+    if (!cs || typeof cs !== 'object' || Array.isArray(cs)) return false;
+    if (typeof cs.clinicName !== 'string') return false;
+    if (!isValidWeekdayArray(cs.closedWeekdays)) return false;
+
+    const ch = data.companyHolidays;
+    if (!ch || typeof ch !== 'object' || Array.isArray(ch)) return false;
+    if (Object.getPrototypeOf(ch) !== Object.prototype) return false;
+    return Object.keys(ch).every(key =>
+        /^\d{4}-\d{2}-\d{2}$/.test(key) && typeof ch[key] === 'string'
+    );
+}
+
+// 設定・臨時休日の読み込み
+function importData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+        let data;
+        try {
+            data = JSON.parse(reader.result);
+        } catch (e) {
+            alert('読み込みに失敗しました：JSONの形式が正しくありません');
+            return;
+        }
+        if (!isValidImportData(data)) {
+            alert('読み込みに失敗しました：データの形式が正しくありません');
+            return;
+        }
+        if (!confirm('現在の設定と臨時休日を、読み込んだデータで上書きしますか？')) {
+            return;
+        }
+        clinicSettings = {
+            clinicName: data.clinicSettings.clinicName,
+            closedWeekdays: Array.from(new Set(data.clinicSettings.closedWeekdays)).sort((a, b) => a - b)
+        };
+        companyHolidays = Object.assign({}, data.companyHolidays);
+        saveClinicSettings();
+        saveCompanyHolidays();
+        applyClinicName();
+        populateSettingsForm();
+        renderCompanyHolidayList();
+        refreshAllDates();
+    };
+    reader.onerror = () => {
+        alert('読み込みに失敗しました：JSONの形式が正しくありません');
+    };
+    reader.readAsText(file);
+}
+
+// 日付が変わったかチェック
+function checkDateChange() {
+    const todayKey = formatDateKey(new Date());
+    if (todayKey !== lastKnownDateKey) {
+        const prevKey = lastKnownDateKey;
+        lastKnownDateKey = todayKey;
+        refreshForNewDay(prevKey);
+    }
+}
+
+// 日付変更時の再描画
+function refreshForNewDay(prevKey) {
+    const now = new Date();
+    document.getElementById('today-date').innerText = formatDate(now);
+
+    // 前日の月を表示中なら当月へ付け替え
+    const prev = parseDateKey(prevKey);
+    if (currentDisplayMonth.getFullYear() === prev.getFullYear() &&
+        currentDisplayMonth.getMonth() === prev.getMonth()) {
+        currentDisplayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    // 選択日の「今日から◯日後」は古くなるため閉じる
+    document.getElementById('selected-date-info').classList.remove('show');
+
+    refreshAllDates();
+}
+
+// 次の0時（+10秒）に日付変更チェックを予約
+function scheduleMidnightTimer() {
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 10);
+    setTimeout(() => {
+        checkDateChange();
+        scheduleMidnightTimer();
+    }, nextMidnight - now);
 }
 
 // PWA設定
